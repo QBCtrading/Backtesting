@@ -28,4 +28,5 @@ for calc_date in schedule:
         elif 'Shibor3M' in swap[0]:
             NPV = NPV + calcNPV(calc_date, swap[1], swap[2], s3m)
     pnl[getDatetime(calc_date)] = NPV
+    
     print(calc_date,' : ',NPV)

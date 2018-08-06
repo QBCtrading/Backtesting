@@ -1,0 +1,5 @@
+Done:
+defined newSwap function (line 238, main.py) to make create swaps easier when backtesting
+
+To do:
+design a function to print all cashflows of a given swap (peak ctrl+shift+7)

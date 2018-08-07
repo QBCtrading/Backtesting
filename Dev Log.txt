@@ -3,3 +3,4 @@ defined newSwap function (line 238, main.py) to make create swaps easier when ba
 
 To do:
 design a function to print all cashflows of a given swap (peak ctrl+shift+7)
+Demand 1

@@ -1,6 +1,6 @@
 Done:
 defined newSwap function (line 238, main.py) to make create swaps easier when backtesting
+designed a function to print all cashflows of a given swap (peak ctrl+shift+7)
+changed the calendar to China.IB and updated corresponding fr007 & s3m closings
 
 To do:
-design a function to print all cashflows of a given swap (peak ctrl+shift+7)
-Demand 1

@@ -14,7 +14,7 @@ for calc_date in schedule:
     #strategy code
     
     if calc_date == start:
-        rate = getClosing(calc_date, 'FR007', '1Y')/100
+        rate = getClosing(calc_date, 'FR007', '1Y')
         swap = newSwap(calc_date, '1Y', r007, fixed_rate = rate)
         swaps.append(swap)
     

@@ -19,7 +19,7 @@ fr007closingdb = pickle.load(f)
 f.close()
 
 currency = ql.CNYCurrency()
-calendar = ql.China()
+calendar = ql.China(ql.China.IB)
 business_convention = ql.ModifiedFollowing
 day_count = ql.Actual365Fixed()
 float_day_count = ql.Actual360()
@@ -143,8 +143,9 @@ def createSwapWithDate(settle_date, maturity_date, histyc,
 #===end of create swaps===
     
 #===calculate leg NPV with compounding===
-def updateSwap(swap, drct, histyc):
+def updateSwap(newswap, histyc):
     yield_curve, swap_engine, swap_index = histyc[0], histyc[1], histyc[2]
+    swap, drct = newswap[1], newswap[2]
     updatedSwap = ql.VanillaSwap(
             ql.VanillaSwap.Receiver if drct == 1 else ql.VanillaSwap.Payer,
             swap.nominal(),
@@ -159,9 +160,10 @@ def updateSwap(swap, drct, histyc):
     updatedSwap.setPricingEngine(swap_engine)
     return updatedSwap    
 
-def calcFloatingLegNPV(calc_date, swap, drct, histyc):
+def calcFloatingLegNPV(calc_date, newswap, histyc):
     yield_curve, swap_engine, swap_index = histyc[0], histyc[1], histyc[2]
-    swap = updateSwap(swap, drct, histyc)
+    swap, drct = newswap[1], newswap[2]
+    swap = updateSwap(newswap, histyc)
     closingdb = s3mclosingdb if 'Shibor' in swap_index.name() else fr007closingdb
     #schedule for each quarter
     coupon_schedule = [x for x in swap.floatingSchedule()]
@@ -209,10 +211,10 @@ def calcFloatingLegNPV(calc_date, swap, drct, histyc):
         floatingNPV = floatingNPV+dsctcf
     return floatingNPV
 
-
-def calcFixedLegNPV(calc_date, swap, drct, histyc):
+def calcFixedLegNPV(calc_date, newswap, histyc):
     yield_curve, swap_engine, swap_index = histyc[0], histyc[1], histyc[2]
-    swap = updateSwap(swap, drct, histyc)
+    swap, drct = newswap[1], newswap[2]
+    swap = updateSwap(newswap, histyc)
     coupon_schedule = [x for x in swap.floatingSchedule()]
     fixedNPV = 0
     for i in range(0,len(coupon_schedule)-1):
@@ -229,9 +231,9 @@ def calcFixedLegNPV(calc_date, swap, drct, histyc):
         fixedNPV = fixedNPV + dsctcf
     return fixedNPV
 
-def calcNPV(calc_date, swap, drct, histyc):
+def calcNPV(calc_date, newswap, histyc):
     ql.Settings.instance().evaluationDate = calc_date
-    return calcFloatingLegNPV(calc_date, swap, drct, histyc) + calcFixedLegNPV(calc_date, swap, drct, histyc)
+    return calcFloatingLegNPV(calc_date, newswap, histyc) + calcFixedLegNPV(calc_date, newswap, histyc)
 #===end of calculate leg NPV with compounding===
 
 #===backtesting tool===
@@ -247,8 +249,94 @@ def getClosing(calc_date, index_type, periodstr):
     s3mindex = {'3M':0,'6M':1,'9M':2,'1Y':3,'2Y':4,
                 '3Y':5,'4Y':6,'5Y':7,'7Y':8,'10Y':9}
     if index_type == 'FR007':
-        return fr007closingdb[getDatetime(calc_date)][fr007index[periodstr]]
+        return fr007closingdb[getDatetime(calc_date)][fr007index[periodstr]]/100
     elif index_type == 'Shibor3M':
-        return s3mclosingdb[getDatetime(calc_date)][s3mindex[periodstr]]
+        return s3mclosingdb[getDatetime(calc_date)][s3mindex[periodstr]]/100
+
+#
+#printFixedLegCF printFloatingLegCF and printCashflow are designed to print
+#the cashflow detail of a given swap
+#
+
+def printFixedLegCF(calc_date, newswap, histyc):
+    yield_curve, swap_engine, swap_index = histyc[0], histyc[1], histyc[2]
+    swap, drct = newswap[1], newswap[2]
+    swap = updateSwap(newswap, histyc)
+    coupon_schedule = [x for x in swap.floatingSchedule()]
+    for i in range(0,len(coupon_schedule)-1):
+        start_date = coupon_schedule[i]
+        end_date = coupon_schedule[i+1]
+        rate = swap.fixedRate() * (end_date - start_date) / 365
+        cf = swap.nominal() * rate
+        print(start_date,'->',end_date,'(%.0fd)'%(end_date - start_date),', rate = %.4f'%(swap.fixedRate()*100),
+              '%%, cf = %.2f'%cf)
+
+def printFloatingLegCF(calc_date, newswap, histyc):
+    yield_curve, swap_engine, swap_index = histyc[0], histyc[1], histyc[2]
+    swap, drct = newswap[1], newswap[2]
+    swap = updateSwap(newswap, histyc)
+    daycount = 360 if 'Shibor' in swap_index.name() else 365
+    closingdb = s3mclosingdb if 'Shibor' in swap_index.name() else fr007closingdb
+    #schedule for each quarter
+    coupon_schedule = [x for x in swap.floatingSchedule()]
+    for i in range(0,len(coupon_schedule)-1):
+        start_date = coupon_schedule[i]
+        end_date = coupon_schedule[i+1] 
+        #schedule for each week
+        accrual_schedule = [x for x in ql.Schedule(start_date,end_date,
+                                                   ql.Period(ql.Weekly),
+                                                   calendar,
+                                   business_convention, business_convention,
+                                   ql.DateGeneration.Forward, False)]
+        accrual_rate = 1
+        if 'Shibor' in swap_index.name():
+            #simple interest for shibor irs so there is only one period 
+            accrual_schedule = [start_date, end_date] 
+        for j in range(0,len(accrual_schedule)-1):
+                accrual_start_date = accrual_schedule[j]
+                accrual_end_date = accrual_schedule[j+1]
+                fixing_date = calendar.advance(accrual_start_date,-1,ql.Days,
+                                               business_convention)
+                rate = 0.0
+                if accrual_start_date > calc_date:
+                    #get the forward rate within weekly period through fair rate
+                    ss = createSwapWithDate(accrual_start_date, accrual_end_date, 
+                                  histyc)
+                    rate = ss.fairRate()
+                    if 'Shibor' in swap_index.name():
+                        rate = rate*360/365
+                else:
+                    #historical
+                    rate = closingdb.loc[getDatetime(
+                            calendar.advance(accrual_start_date,-1,ql.Days,
+                                             business_convention)
+                                                 )][0]/100
+                rate = rate * (accrual_end_date - accrual_start_date) / daycount
+                accrual_rate = accrual_rate * (1+rate)
+                print(accrual_start_date,' -> ',accrual_end_date,
+                      '(%.0fd)'%(accrual_end_date - accrual_start_date),
+                      ', fixing = %.4f'%(rate/(accrual_end_date - accrual_start_date)
+                      *daycount*100),
+                      '%, fixing_date = ',fixing_date,
+                      end = '')
+                fixing_date = getDatetime(fixing_date)
+                if fixing_date.weekday() == 5 or fixing_date.weekday() == 6:
+                    print ('(%s)'%('saturdaty' if fixing_date.weekday()==5 else 'sunday'),
+                      end = '')
+                if accrual_start_date <= calc_date:
+                    print('(historical)')
+                else:
+                    print()
+        cf = swap.nominal()*(accrual_rate-1)
+        print('sum: ',start_date,' -> ',end_date,'(%.0fd)'%(end_date - start_date),', rate = %.4f'%((accrual_rate-1)/(end_date - start_date)*
+                               daycount*100),'%%, cf = %.2f'%cf)
+
+def printCashflow(calc_date, newswap, histyc):
+    yield_curve, swap_engine, swap_index = histyc[0], histyc[1], histyc[2]
+    swap, drct = newswap[1], newswap[2]
+    print('cashflows of fixed leg: ')
+    printFixedLegCF(calc_date, newswap, histyc)
+    print('cashflows of floating leg: ')
+    printFloatingLegCF(calc_date, newswap, histyc)
     
 #===end of backtesting tool===

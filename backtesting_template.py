@@ -22,11 +22,11 @@ for calc_date in schedule:
 
     #calculate daily npv
     NPV = 0
-    for swap in swaps:
-        if 'FR007' in swap[0]:
-            NPV = NPV + calcNPV(calc_date, swap[1], swap[2], r007)
-        elif 'Shibor3M' in swap[0]:
-            NPV = NPV + calcNPV(calc_date, swap[1], swap[2], s3m)
+    for newswap in swaps:
+        if 'FR007' in newswap:
+            NPV = NPV + calcNPV(calc_date, newswap, r007)
+        elif 'Shibor3M' in newswap:
+            NPV = NPV + calcNPV(calc_date, newswap, s3m)
     pnl[getDatetime(calc_date)] = NPV
     
     print(calc_date,' : ',NPV)

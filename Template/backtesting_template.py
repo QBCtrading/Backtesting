@@ -19,7 +19,6 @@ for calc_date in schedule:
         swaps.append(swap)
     
     #end of strategy
-
     #calculate daily npv
     NPV = 0
     for newswap in swaps:

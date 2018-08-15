@@ -52,7 +52,9 @@ M1004132"
 
 l = pd.Series()
 start = ql.Date(10,8,2018)
-end = getqlDate(datetime.date.today())
+end = ql.Date(14,8,2018)
+#end = getqlDate(datetime.date.today())
+
 schedule = ql.Schedule(start,end,ql.Period(ql.Daily),
                        calendar, business_convention, business_convention,
                        ql.DateGeneration.Forward, False)

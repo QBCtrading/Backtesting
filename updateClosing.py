@@ -51,8 +51,8 @@ M1004132"
 #***start to update closing
 
 l = pd.Series()
-start = ql.Date(10,8,2018)
-end = ql.Date(14,8,2018)
+start = ql.Date(8,8,2018)
+end = ql.Date(15,8,2018)
 #end = getqlDate(datetime.date.today())
 
 schedule = ql.Schedule(start,end,ql.Period(ql.Daily),
@@ -71,6 +71,9 @@ for calc_date in schedule:
     if date not in s3mclosingdb.index:
         l[date] = getShibor3MClosing(date)
 s3mclosingdb = s3mclosingdb.append(l)
+
+fr007closingdb = fr007closingdb.sort_index()
+s3mclosingdb = s3mclosingdb.sort_index()
 
 #output
 f = open('fr007.dat','wb')

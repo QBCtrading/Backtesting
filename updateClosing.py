@@ -51,8 +51,8 @@ M1004132"
 #***start to update closing
 
 l = pd.Series()
-start = ql.Date(9,7,2018)
-end = getqlDate(datetime.date.today())
+start = ql.Date(10,8,2018)
+end = ql.Date(14,8,2018)
 schedule = ql.Schedule(start,end,ql.Period(ql.Daily),
                        calendar, business_convention, business_convention,
                        ql.DateGeneration.Forward, False)

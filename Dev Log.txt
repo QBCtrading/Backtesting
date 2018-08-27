@@ -4,3 +4,6 @@ Done:
 * changed the calendar to China.IB and updated corresponding fr007 & s3m closings
 
 To do:
+* Re-assign a swap engine to an existing swap, swap valuation functions (npv, bps, printcashflow) should be ready
+* comment out % in main.py
+* Remove the dependency on curve engine when building swaps

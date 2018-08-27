@@ -3,10 +3,10 @@ import QuantLib as ql
 import pandas as pd
 import numpy as np
 import datetime
-from WindPy import w
+#from WindPy import w
 import matplotlib.pyplot as plt
 #%matplotlib qt5
-w.start()
+#w.start()
 
 #read fr007, s3m cfets closing from file
 #be careful of the working directory

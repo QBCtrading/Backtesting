@@ -332,11 +332,21 @@ def printFloatingLegCF(calc_date, newswap, histyc):
                                daycount*100),'%%, cf = %.2f'%cf)
 
 def printCashflow(calc_date, newswap, histyc):
+    ql.Settings.instance().evaluationDate = calc_date
     yield_curve, swap_engine, swap_index = histyc[0], histyc[1], histyc[2]
     swap, drct = newswap[1], newswap[2]
     print('cashflows of fixed leg: ')
     printFixedLegCF(calc_date, newswap, histyc)
     print('cashflows of floating leg: ')
     printFloatingLegCF(calc_date, newswap, histyc)
+    
+def saveClosing():
+    f = open('fr007.dat','wb')
+    pickle.dump(fr007closingdb,f)
+    f.close()
+        
+    f = open('s3m.dat','wb')
+    pickle.dump(s3mclosingdb,f)
+    f.close()
     
 #===end of backtesting tool===

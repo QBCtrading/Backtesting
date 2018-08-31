@@ -8,8 +8,8 @@ This is a temporary script file.
 import PeakQL as pk
 import datetime
 
-_holidays = 'D:\git_root\Backtesting\PeakData\ChinaHolidays.csv'
-_workingWeekend = 'D:\git_root\Backtesting\PeakData\ChinaIBWorkingWeekends.csv'
+_holidays = 'D:\git_root\Backtesting\Peak\PeakData\ChinaHolidays.csv'
+_workingWeekend = 'D:\git_root\Backtesting\Peak\PeakData\ChinaIBWorkingWeekends.csv'
 
 def checkPeakErr(errVec):
     if errVec.size() > 0:

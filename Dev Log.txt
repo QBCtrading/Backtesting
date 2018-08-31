@@ -2,9 +2,8 @@ Done:
 * defined newSwap function (line 238, main.py) to make create swaps easier when backtesting
 * designed a function to print all cashflows of a given swap (peak ctrl+shift+7)
 * changed the calendar to China.IB and updated corresponding fr007 & s3m closings
+* Comment out "%" in main.py (Commented out wind python package as well)
+* Re-assign a swap engine to an existing swap, swap valuation functions (npv, bps, printcashflow) should be ready (Solved. It's because of not setting evaluationDate in printCashflow() )
+* Remove the dependency on curve engine when building swaps (Actually QuantLib requires to add the index when building the swap, and the index is in curve object, so I have to use the curve object when building swaps.)
 
 To do:
-* Re-assign a swap engine to an existing swap, swap valuation functions (npv, bps, printcashflow) should be ready
-* Remove the dependency on curve engine when building swaps
-* Comment out "%" in main.py
-

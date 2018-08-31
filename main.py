@@ -1,4 +1,5 @@
 #===initialization===
+
 import QuantLib as ql
 import pandas as pd
 import numpy as np
@@ -10,11 +11,14 @@ import matplotlib.pyplot as plt
 
 #read fr007, s3m cfets closing from file
 #be careful of the working directory
+
 import pickle
-f = open('s3m.dat','rb')
+import os
+absdir = os.path.dirname(os.path.realpath(__file__))
+f = open(absdir+'\\s3m.dat','rb')
 s3mclosingdb = pickle.load(f)
 f.close()
-f = open('fr007.dat','rb')
+f = open(absdir+'\\fr007.dat','rb')
 fr007closingdb = pickle.load(f)
 f.close()
 
@@ -25,19 +29,32 @@ day_count = ql.Actual365Fixed()
 float_day_count = ql.Actual360()
 coupon_freq = ql.Quarterly
 coupon_tenor = ql.Period('3M')
+
 #===end of initialization===
 
 #===frequently used functions===
+
 def getDatetime(calc_date):
     return datetime.date(calc_date.year(), calc_date.month(), calc_date.dayOfMonth())
 def getqlDate(date):
     return ql.Date(date.day,date.month,date.year)
+
 #===end of frequently used functions===
         
 #===curve building===
-def buildHistCurve(date, index_type):
+    
+def buildHistCurve(calc_date, index_type):
+    '''Build a historical swap curve for pricing on given date.
+    Input
+      calc_date: qlDate type
+      index_type: 'FR007' or 'Shibor3M'
+    Output
+      Return a swap curve, which consists of three objects: YieldTermStruecture,
+      SwapEngine and SwapIndex. No need to pay attention to detail. Just use the
+      returned curve for pricing directly
+    '''
     swap_rates, curve_tenor, swap_helpers = [],[],[]
-    calc_date = ql.Date(date.day, date.month,date.year)
+    date = getDatetime(calc_date)
     ql.Settings.instance().evaluationDate = calc_date
     #irs are settled T+1
     settle_date = calendar.advance(calc_date, 1, ql.Days, business_convention)
@@ -108,11 +125,17 @@ def buildHistCurve(date, index_type):
                                  closingdb.loc[fixingdate][0]/100)
     
     return (yield_curve, swap_engine, swap_index)
+
 #===end of curve building===
     
 #===create swaps===
+    
 def createSwap(calc_date, periodstr, histyc,
                notional = 100000000, fixed_rate = 0.0):
+    '''This function is used to create a ql.VanillaSwap object only, which cannot
+    be directly used. For backtesting purpose, please use NewSwap() to create 
+    your swaps.
+    '''
     settle_date = calendar.advance(calc_date, 1, ql.Days, business_convention)
     maturity_date = calendar.advance(settle_date, ql.Period(periodstr),
                                      ql.ModifiedFollowing)
@@ -121,6 +144,10 @@ def createSwap(calc_date, periodstr, histyc,
 
 def createSwapWithDate(settle_date, maturity_date, histyc,
                        notional = 100000000, fixed_rate = 0.0):
+    '''This function is used to create a ql.VanillaSwap object only, which cannot
+    be directly used. For backtesting purpose, please use NewSwap() to create 
+    your swaps.
+    '''
     yield_curve, swap_engine, swap_index = histyc[0], histyc[1], histyc[2]
     fixed_schedule = ql.Schedule(settle_date, maturity_date, 
                              coupon_tenor, calendar, business_convention,
@@ -140,10 +167,22 @@ def createSwapWithDate(settle_date, maturity_date, histyc,
             )
     mySwap.setPricingEngine(swap_engine)
     return mySwap
+
 #===end of create swaps===
     
 #===calculate leg NPV with compounding===
+    
 def updateSwap(newswap, histyc):
+    '''Apply this function when you create a swap on one day and price it on
+    another day. The reason is that pricing engine and fixing need to be updated,
+    but QuantLib python doesn't support that, so the only way to update is creating
+    a new swap using given input.
+    Input:
+      newswap: built by NewSwap(). The swap you need to update
+      histyc: The yield curve built by buildHistCurve()
+    Output:
+      Return an upated swap. Than you can price or print cashflow of this swap.
+    '''
     yield_curve, swap_engine, swap_index = histyc[0], histyc[1], histyc[2]
     swap, drct = newswap[1], newswap[2]
     updatedSwap = ql.VanillaSwap(
@@ -161,6 +200,16 @@ def updateSwap(newswap, histyc):
     return updatedSwap    
 
 def calcFloatingLegNPV(calc_date, newswap, histyc):
+    '''Calculate the floating leg NPV of a given swap. Make sure your curve has 
+    all the fixing required to calculate.
+    Input:
+      calc_date: qlDate type. Given evaluation date
+      newswap: built by NewSwap()
+      histyc: The yield curve on calc_date, built by buildHistCurve()
+    Output:
+      Return NPV, a float number
+    '''
+    ql.Settings.instance().evaluationDate = calc_date
     yield_curve, swap_engine, swap_index = histyc[0], histyc[1], histyc[2]
     swap, drct = newswap[1], newswap[2]
     swap = updateSwap(newswap, histyc)
@@ -212,6 +261,15 @@ def calcFloatingLegNPV(calc_date, newswap, histyc):
     return floatingNPV
 
 def calcFixedLegNPV(calc_date, newswap, histyc):
+    '''Calculate the fixed leg NPV of a given swap.
+    Input:
+      calc_date: qlDate type. Given evaluation date
+      newswap: built by NewSwap()
+      histyc: The yield curve on calc_date, built by buildHistCurve()
+    Output:
+      Return NPV, a float number
+    '''
+    ql.Settings.instance().evaluationDate = calc_date
     yield_curve, swap_engine, swap_index = histyc[0], histyc[1], histyc[2]
     swap, drct = newswap[1], newswap[2]
     swap = updateSwap(newswap, histyc)
@@ -232,12 +290,36 @@ def calcFixedLegNPV(calc_date, newswap, histyc):
     return fixedNPV
 
 def calcNPV(calc_date, newswap, histyc):
-    ql.Settings.instance().evaluationDate = calc_date
+    '''Calculate the NPV of a given swap. This function actually returns the sum
+    of floating and fixed leg NPV.
+    Input:
+      calc_date: qlDate type. Given evaluation date
+      newswap: built by NewSwap()
+      histyc: The yield curve on calc_date, built by buildHistCurve()
+    Output:
+      Return NPV, a float number
+    '''
     return calcFloatingLegNPV(calc_date, newswap, histyc) + calcFixedLegNPV(calc_date, newswap, histyc)
 #===end of calculate leg NPV with compounding===
 
 #===backtesting tool===
 def newSwap(calc_date, periodstr, histyc, notional = 100000000, fixed_rate = 0.0):
+    '''Create a swap for backtesting purpose.
+    Input:
+      calc_date: qlDate type. Your trade date. Assume T+1 settlement
+      periodstr: term of the swap, like '1W','1M','3M','1Y',etc.
+      histyc: the historical swap curve on calc_date. Built by buildHistCurve()
+      notional: direction and notional of the swap (CNY). Default is 100000000(100mio).
+        Positive notional means long(receive). Negative notional means short(pay).
+      fixed_rate: fixed rate of the swap. not in percentile (0.01 for 1%, not 1).
+        Default is 0.0
+    Output:
+      Return an tuple.
+      The first element is the type of swap: 'FR007' or 'Shibor3M'
+      The second element is a ql.VanillaSwap object
+      The third element is the direction. 1 means long(receive). -1 means short(
+      pay).
+    '''
     newswap = createSwap(calc_date, periodstr, histyc,
                          notional = notional, fixed_rate = fixed_rate)
     index_type = 'Shibor3M' if 'Shibor' in histyc[2].familyName() else 'FR007'
@@ -259,6 +341,15 @@ def getClosing(calc_date, index_type, periodstr):
 #
 
 def printFixedLegCF(calc_date, newswap, histyc):
+    '''Print fixed leg cashflows for a given swap
+    Input:
+      calc_date: qlDate type. Given evaluation date
+      newswap: built by NewSwap()
+      histyc: The yield curve on calc_date, built by buildHistCurve()
+    Output:
+      Return nothing. Print all the cashflows
+    '''
+    ql.Settings.instance().evaluationDate = calc_date
     yield_curve, swap_engine, swap_index = histyc[0], histyc[1], histyc[2]
     swap, drct = newswap[1], newswap[2]
     swap = updateSwap(newswap, histyc)
@@ -272,6 +363,15 @@ def printFixedLegCF(calc_date, newswap, histyc):
               '%%, cf = %.2f'%cf)
 
 def printFloatingLegCF(calc_date, newswap, histyc):
+    '''Print floating leg cashflows for a given swap
+    Input:
+      calc_date: qlDate type. Given evaluation date
+      newswap: built by NewSwap()
+      histyc: The yield curve on calc_date, built by buildHistCurve()
+    Output:
+      Return nothing. Print all the cashflows
+    '''
+    ql.Settings.instance().evaluationDate = calc_date
     yield_curve, swap_engine, swap_index = histyc[0], histyc[1], histyc[2]
     swap, drct = newswap[1], newswap[2]
     swap = updateSwap(newswap, histyc)
@@ -332,7 +432,14 @@ def printFloatingLegCF(calc_date, newswap, histyc):
                                daycount*100),'%%, cf = %.2f'%cf)
 
 def printCashflow(calc_date, newswap, histyc):
-    ql.Settings.instance().evaluationDate = calc_date
+    '''Print both floating and fixed leg cashflows for a given swap
+    Input:
+      calc_date: qlDate type. Given evaluation date
+      newswap: built by NewSwap()
+      histyc: The yield curve on calc_date, built by buildHistCurve()
+    Output:
+      Return nothing. Print all the cashflows
+    '''
     yield_curve, swap_engine, swap_index = histyc[0], histyc[1], histyc[2]
     swap, drct = newswap[1], newswap[2]
     print('cashflows of fixed leg: ')
@@ -341,11 +448,11 @@ def printCashflow(calc_date, newswap, histyc):
     printFloatingLegCF(calc_date, newswap, histyc)
     
 def saveClosing():
-    f = open('fr007.dat','wb')
+    f = open(absdir+'\\fr007.dat','wb')
     pickle.dump(fr007closingdb,f)
     f.close()
         
-    f = open('s3m.dat','wb')
+    f = open(absdir+'\\s3m.dat','wb')
     pickle.dump(s3mclosingdb,f)
     f.close()
     

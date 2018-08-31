@@ -132,7 +132,7 @@ def paramToPyNative(param):
 def unpackVecVecResult(resultVecVec):
     result = []
     for row in resultVecVec:
-        result.append(tuple(_paramToPyNative(i) for i in row))
+        result.append(tuple(paramToPyNative(i) for i in row))
     return result
     
 def unpackVecResult(resultVec):

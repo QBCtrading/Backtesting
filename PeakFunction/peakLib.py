@@ -39,7 +39,7 @@ def py_SwapInfo(objId, legNumber, asOfDate, resultFormat=''):
     return result
 
 
-def py_BuildSwapCurve(curveName, anchorDate, indexName, tenors, rates, extFwdCurve, extDiscCurve='', startTenors=[], useExtCurveAsBase=True, template=''):
+def py_BuildSwapCurve(curveName, anchorDate, indexName, tenors, rates, extFwdCurve, extDiscCurve='', startTenors=[], useExtCurveAsBase=False, template=''):
     '''returns forwardCurveId, discountCurveId, curveEngineId
     '''
     result = pk.Param_VecVec()
@@ -50,11 +50,25 @@ def py_BuildSwapCurve(curveName, anchorDate, indexName, tenors, rates, extFwdCur
     names = tuple(rc)
     return names, peakHelper.unpackVecVecResult(result)
 
-def py_SwapLegNPV(swapId, forwardCurveId, discountCurveId, cfAfterDate=None, legNumber=PkMissingInt, cfAfterDateInclusive=False, forecastTodaysFixing=False, debugLevel=0):
+def py_SwapLegNPV(swapIds, forwardCurveId, discountCurveId, cfAfterDate=None, legNumber=pk.PkMissingInt, cfAfterDateInclusive=False, forecastTodaysFixing=False, debugLevel=0):
     errVec = pk.Str_Vec()
     result = pk.Param_VecVec()
     cfAfterDate = peakHelper.dateToPkDate(cfAfterDate) if cfAfterDate else pk.PkMissingDate
-    rc = pk.pk_SwapLegNPV(peakHelper.listToPkVec(swapId), legNumber, forwardCurveId, discountCurveId, cfAfterDate, cfAfterDateInclusive, forecastTodaysFixing, debugLevel, result, errVec)
+    rc = pk.pk_SwapLegNPV(peakHelper.listToPkVec(swapIds), legNumber, forwardCurveId, discountCurveId, cfAfterDate, cfAfterDateInclusive, forecastTodaysFixing, debugLevel, result, errVec)
+    peakHelper.checkPeakErr(errVec)
+    return peakHelper.unpackVecVecResult(result)
+
+def py_VanillaSwapFairRate(swapIds, forwardCurveIds, discountCurveIds, forecastTodaysFixing=False):
+    errVec = pk.Str_Vec()
+    result = pk.Param_VecVec()
+    coefficients = pk.Double_Vec();
+    leafInstrumentArgsBase_Vec = pk.YCLeafInstrumentArgsBase_Vec()
+    curveMap = pk.Str_VecVec()
+    curveSuffix = pk.PkMissingString
+    rateOrSpread = pk.Str_Vec()
+    #Str_Vec objIds, Str_Vec forwardCurveIds, Str_Vec discountCurveIds, Double_Vec coefficients, YCLeafInstrumentArgsBase_Vec leafInstrumentArgsBase, PkCommon::PkBool const & forecastTodaysFixing, Str_VecVec curveMapIn, Param_VecVec result, Str_Vec errVec, std::string const & curveSuffix, Str_Vec rateOrSpread
+    rc =pk.pk_VanillaSwapFairRate(peakHelper.listToPkVec(swapIds), peakHelper.listToPkVec(forwardCurveIds), peakHelper.listToPkVec(discountCurveIds), coefficients, leafInstrumentArgsBase_Vec, forecastTodaysFixing, curveMap, result, errVec, curveSuffix, rateOrSpread)
+    #rc =pk.pk_VanillaSwapFairRate(peakHelper.listToPkVec(swapIds), peakHelper.listToPkVec(forwardCurveIds), peakHelper.listToPkVec(discountCurveIds), coefficients, leafInstrumentArgsBase, forecastTodaysFixing, curveMap, result, errVec)
     peakHelper.checkPeakErr(errVec)
     return peakHelper.unpackVecVecResult(result)
 

@@ -26,9 +26,9 @@ refDataService = session.getService("//blp/refdata")
 
 pytz.country_timezones('cn')
 tz = pytz.timezone('Asia/Shanghai')
-startTime = dt.datetime(2018,8,25,8,30, tzinfo=tz)
+startTime = dt.datetime(2015,8,25,8,30, tzinfo=tz)
 #startTime = dt.datetime(2018,8,31,1,32)
-endTime = dt.datetime(2018,8,31,18,30, tzinfo=tz)
+endTime = dt.datetime(2018,9,5,18,30, tzinfo=tz)
 #endTime = dt.datetime(2018,8,31,17,32)
 
 
@@ -42,12 +42,18 @@ endTime.strftime(fmt)
 tzUS = pytz.timezone('America/New_York')
 
 securities = ['180204.IB']
-sources = ['TPCY']
-#sources = ['TPCY','CFIY','PTCN','CBBJ','CCTC']
+bondList = pd.read_csv('D:\git_root\Backtesting\Bloomberg\BondList.csv', header= None)
+securities = list(bondList[0])
+len(securities)
+for x in securities:
+    print(x)
 
-tick = pd.DataFrame()
+sources = ['TPCY','CFIY','PTCN','CBBJ','CCTC']
+
+
 
 for security in securities:
+    tick = pd.DataFrame()
     for source in sources:
         for TYPE in ['TRADE','BID','ASK']:
             try: 
@@ -74,7 +80,7 @@ for security in securities:
                     for row in rows:
                         tmp = {str(field.name()) : [field.getValue()] for field in row.elements()}
                         tmp = pd.DataFrame(tmp).set_index('time')
-                        print(tmp.index[0].astimezone(tz))
+                        print(security, tmp.index[0].astimezone(tz))
                         ret = ret.append(tmp)
                 ret.index = [idx.astimezone(tz) for idx in ret.index]
                 ret['code'] = security
@@ -86,7 +92,13 @@ for security in securities:
             except:
                 continue
 
-tick = tick.sort_index()
+    tick = tick.sort_index()
+    path = "D:\git_root\Backtesting\Bloomberg\\"
+    fileName = security
+    suffix = ".pkl"
+    fullName = path + fileName + suffix
+    fullName
+    tick.to_pickle(fullName)
 
 
 session.stop()

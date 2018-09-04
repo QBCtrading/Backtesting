@@ -126,3 +126,6 @@ grouped
 grouped.to_csv ("grouped.csv" , encoding = "utf-8")　
 for key in grouped:
     print(key)
+    
+    
+    

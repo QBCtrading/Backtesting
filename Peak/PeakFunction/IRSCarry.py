@@ -26,6 +26,22 @@ def getSwapFairRate(SwapIndex, swapMaturityTenor, forwardCurveId, discountCurveI
 
 peakHelper.initPeak()
 indexName = "FR007"
+
+anchorDate = dt.date.today()
+
+indexFR007 = peakLib.py_getSwapIndex("FR007")
+indexShibor = peakLib.py_getSwapIndex("Shibor3M")
+
+yestoday = anchorDate + dt.timedelta(days = -1)
+
+fixingDates = [yestoday, anchorDate]
+fixingValues = [0.04 , 0.05]
+peakLib.py_IndexAddFixings(indexFR007, fixingDates, fixingValues)
+
+peakLib.py_IndexAssignedFixings(indexFR007)
+
+
+
 anchorDate = dt.date(2017, 11, 14)
 startDate = dt.date(2017, 11, 30)
 swapId = "test"

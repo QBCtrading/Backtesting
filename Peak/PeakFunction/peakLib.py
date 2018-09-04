@@ -88,6 +88,18 @@ def py_IndexAddFixings(indexId, fixingDates, fixingValues):
     peakHelper.checkPeakErr(errVec)
     return rc
 
+def py_IndexAssignedFixings(indexId):
+    errVec = pk.Str_Vec()
+    fixingDates = pk.PkInt_Vec()
+    result = pk.Double_Vec()
+    resultDates = pk.PkInt_Vec()
+    pk.pk_IndexAssignedFixings(indexId, fixingDates, result, resultDates, errVec)
+    peakHelper.checkPeakErr(errVec)
+    peakDate = tuple((peakHelper.pkDateToDate(i) for i in resultDates))
+    fixing = peakHelper.pkVecToList(result)
+    print(peakDate, fixing)
+
+
 def py_ObjectExists(objectId):
     errVec = pk.Str_Vec()
     objectIds = pk.Str_Vec(objectId)
@@ -95,3 +107,14 @@ def py_ObjectExists(objectId):
     pk.pk_ObjectExists(objectIds, result, errVec)
     peakHelper.checkPeakErr(errVec)
     return result[0]
+
+def py_getSwapIndex(convention):
+    '''
+    FR007, Shibor3M
+    '''
+    errVec = pk.Str_Vec()
+    settlementType = 0 # 0 for MF, 1 for Unadjusted
+    result = pk.Str_Vec()
+    pk.pk_GetSwapConvention(convention, settlementType, result, errVec)
+    peakHelper.checkPeakErr(errVec)
+    return result[1]

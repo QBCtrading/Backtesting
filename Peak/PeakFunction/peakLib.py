@@ -87,3 +87,11 @@ def py_IndexAddFixings(indexId, fixingDates, fixingValues):
     rc = pk.pk_IndexAddFixings(indexId, peakHelper.listToPkVec(fixingDates), peakHelper.listToPkVec(fixingValues), errVec)
     peakHelper.checkPeakErr(errVec)
     return rc
+
+def py_ObjectExists(objectId):
+    errVec = pk.Str_Vec()
+    objectIds = pk.Str_Vec(objectId)
+    result = pk.PkInt_Vec()
+    pk.pk_ObjectExists(objectIds, result, errVec)
+    peakHelper.checkPeakErr(errVec)
+    return result[0]
